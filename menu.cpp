@@ -3,6 +3,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <cstdlib>
+#include <limits>
 
 using namespace std;
 
@@ -23,8 +24,8 @@ int Menu::getInputKey() const {
 
     // Handle arrow keys
     if (ch == 27) {
-        getchar();       
-        ch = getchar();  
+        getchar();
+        ch = getchar();
     }
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
@@ -75,7 +76,7 @@ void Menu::run() {
     while (!(key == 27 || (key == 10 && items_[selectedIndex_] == "Exit"))) {
         drawMenu();
         key = getInputKey();
-        handleKey(key);  
+        handleKey(key);
     }
 }
 
@@ -116,40 +117,51 @@ void Menu::handleKey(int key) {
 void Menu::onEnter() {
     string sel = items_[selectedIndex_];
 
-    if (sel == "New")      
+    if (sel == "New")
         runNew();
-    else if (sel == "Display") 
+    else if (sel == "Display")
         runDisplay();
-    else if (sel == "Exit") 
+    else if (sel == "Exit")
         exit(0);
 }
 
 
 // ==================== NEW ====================
 void Menu::runNew() {
-    clearScreen();
-    cout << "Enter text (Enter = save, Backspace = cancel):\n\n";
-
-    string input;
-
     while (true) {
-        int c = getInputKey();
+        clearScreen();
 
-        if (c == 127) { // cancel
-            cout << "\nCancelled.\n";
-            sleep(1);
+        if (empCount_ >= MAX_EMP) {
+            cout << "Employee limit reached! Cannot add more.\n";
+            cout << "Press Enter to return...";
+            cin.ignore(numeric_limits<std::streamsize>::max(), '\n');
+            cin.get();
             return;
         }
-        else if (c == 10) { // save
-            storedText_ = input;
-            cout << "\nSaved.\n";
-            sleep(1);
+        cout << "=== ADD NEW EMPLOYEE ===\n\n";
+        Employee emp;
+
+        emp.firstName = readNonEmptyString("Enter First Name: ");
+        emp.lastName  = readNonEmptyString("Enter Last Name: ");
+        emp.age       = readInt("Enter Age (1-120): ", 1, 120);
+
+        emp.birth.day   = readInt("Enter Birth Day (1-31): ", 1, 31);
+        emp.birth.month = readInt("Enter Birth Month (1-12): ", 1, 12);
+        emp.birth.year  = readInt("Enter Birth Year (1900-2025): ", 1900, 2025);
+
+        employees_[empCount_++] = emp;
+
+        cout << "\nEmployee Saved Successfully!\n";
+
+        cin.ignore(numeric_limits<std::streamsize>::max(), '\n');
+        cout << "Add Another? (y/n): ";
+
+        char choice;
+        cin >> choice;
+        cin.ignore(numeric_limits<std::streamsize>::max(), '\n');  // Clear the input buffer
+
+        if (choice != 'y' && choice != 'Y') {
             return;
-        }
-        else {
-            input += static_cast<char>(c);
-            cout << static_cast<char>(c);
-            cout.flush();
         }
     }
 }
@@ -159,16 +171,54 @@ void Menu::runNew() {
 void Menu::runDisplay() {
     clearScreen();
 
-    if (storedText_.empty())
-        cout << "No text stored.\n\n";
-    else
-        cout << "Stored text:\n" << storedText_ << "\n\n";
+    if (empCount_ == 0) {
+        cout << "No Employees Added.\n\n";
+    } else {
+        cout << "=== EMPLOYEE LIST ===\n\n";
+        for (int i = 0; i < empCount_; ++i) {
+            cout << i + 1 << ") "
+                 << employees_[i].firstName << " "
+                 << employees_[i].lastName
+                 << " | Age: " << employees_[i].age
+                 << " | Birth: "
+                 << employees_[i].birth.day << "/"
+                 << employees_[i].birth.month << "/"
+                 << employees_[i].birth.year
+                 << "\n";
+        }
+    }
 
-    cout << "Press Enter or Backspace to return...";
+    cout << "\nPress Enter or Backspace to return...";
 
     while (true) {
         int c = getInputKey();
-        if (c == 10 || c == 127)
-            return;
+        if (c == 10 || c == 127) return;
+    }
+}
+
+
+// ==================== VALIDATION ====================
+string Menu::readNonEmptyString(const string& msg) {
+    string s;
+    while (true) {
+        cout << msg;
+        cin >> s;
+        if (!s.empty()) return s;
+        cout << "Input cannot be empty. Try again.\n";
+    }
+}
+
+int Menu::readInt(const string& msg, int min, int max) {
+    int x;
+    while (true) {
+        cout << msg;
+        if (cin >> x && x >= min && x <= max)
+            return x;
+
+        cout << "Invalid number! Enter a value between "
+             << min << " and " << max << ".\n";
+
+        cin.clear();
+        cin.ignore(1000, '\n');
     }
 }

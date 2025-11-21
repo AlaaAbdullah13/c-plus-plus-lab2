@@ -5,33 +5,53 @@
 #include <vector>
 using namespace std;
 
+struct BirthDate {
+    int day;
+    int month;
+    int year;
+};
+
+struct Employee {
+    string firstName;
+    string lastName;
+    int age;
+    BirthDate birth;
+};
+
 class Menu {
 public:
-    Menu();          
-    void run();     
+    Menu();
+    void run();
 
 private:
-    vector<string> items_;    
-    size_t selectedIndex_;       
-    string storedText_;       
+    static const int MAX_EMP = 100;
+    Employee employees_[MAX_EMP];
+    int empCount_ = 0;
 
-    // Drawing 
+    vector<string> items_;
+    int selectedIndex_;
+    string storedText_;
+
+    // Drawing
     void drawMenu() const;
     void drawBorder() const;
     void drawUsageLine() const;
 
-    // Key handling
-    void handleKey(int key); 
-    void onEnter();          
-    void runNew();           
-    void runDisplay();       
+    // Logic
+    void handleKey(int key);
+    void onEnter();
 
-    // Input
+    void runNew();      // add employee
+    void runDisplay();  // list employees
+
+    // Input helpers
     int getInputKey() const;
+    void clearScreen() const;
+    void goToXY(int, int) const;
 
-    // Console helpers
-    void clearScreen() const;        
-    void goToXY(int x, int y) const; 
+    // Validation helpers
+    string readNonEmptyString(const string& msg);
+    int readInt(const string& msg, int min, int max);
 };
 
 #endif
